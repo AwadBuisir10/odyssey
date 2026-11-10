@@ -156,7 +156,15 @@ export async function fetchAccessRequests() {
 
       page++; // fetch next page
     }
-    return allAccessRequests;
+
+    // Deduplicate by id in case of overlapping pages (rows shifting between
+    // page fetches would otherwise repeat React keys in the admin list).
+    const seen = new Set<string>();
+    return allAccessRequests.filter((request) => {
+      if (seen.has(request.id)) return false;
+      seen.add(request.id);
+      return true;
+    });
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch access requests data.");

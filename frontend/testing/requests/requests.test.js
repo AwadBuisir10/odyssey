@@ -279,6 +279,29 @@ describe("Data requests", () => {
       );
     });
 
+    it("returns each access request once when pages overlap", async () => {
+      const row = (id) => ({
+        id,
+        attributes: { email: `user${id}@northeastern.edu` },
+      });
+      const page = (from, to) => ({
+        ok: true,
+        json: async () => ({
+          data: Array.from({ length: to - from + 1 }, (_, i) => row(from + i)),
+        }),
+      });
+      // Page 1 is full (250); page 2 repeats id 250 because a row shifted.
+      global.fetch
+        .mockResolvedValueOnce(page(1, 250))
+        .mockResolvedValueOnce(page(250, 252));
+
+      const result = await fetchAccessRequests();
+      const ids = result.map((r) => r.id);
+
+      expect(ids).toHaveLength(252);
+      expect(new Set(ids).size).toBe(ids.length);
+    });
+
     it("should handle fetch errors", async () => {
       global.fetch.mockRejectedValueOnce(new Error("Network error"));
 
